@@ -1,0 +1,1749 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kamus Sambung Kata</title>
+<link rel="icon" type="image/webp" href="https://tr.rbxcdn.com/180DAY-153fbf607a2fe806ae19354cc00c6318/150/150/Image/Webp/noFilter">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+:root {
+  --bg: #080808;
+  --surface: #111111;
+  --surface2: #181818;
+  --border: rgba(255,255,255,0.07);
+  --border-active: rgba(255,255,255,0.3);
+  --text: #f0f0f0;
+  --muted: #555;
+  --accent: #ffffff;
+  --accent2: #aaaaaa;
+  --highlight: #e8ff5a;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+body::after {
+  content: ''; position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 999; opacity: 0.5;
+}
+
+.blobs { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.blob { position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.12; animation: float 14s ease-in-out infinite; }
+.blob-1 { width: 500px; height: 500px; background: #333; top: -150px; left: -100px; }
+.blob-2 { width: 400px; height: 400px; background: #222; top: -80px; right: -120px; animation-delay: -5s; }
+.blob-3 { width: 350px; height: 350px; background: #2a2a2a; bottom: 10%; left: 30%; animation-delay: -9s; }
+
+@keyframes float { 0%,100%{transform:translate(0,0)} 33%{transform:translate(15px,-15px)} 66%{transform:translate(-10px,10px)} }
+
+.wrapper { position: relative; z-index: 1; max-width: 980px; margin: 0 auto; padding: 0 24px 80px; }
+
+/* Corner logo */
+.corner-logo { position: fixed; top: 20px; left: 20px; width: 56px; height: 56px; border-radius: 14px; border: 1px solid var(--border); z-index: 10; transition: transform 0.2s, opacity 0.2s; opacity: 0.85; }
+.corner-logo:hover { transform: scale(1.08); opacity: 1; }
+
+/* Header */
+header { text-align: center; padding: 48px 0 28px; animation: fadeDown 0.6s ease both; }
+@keyframes fadeDown { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+.logo-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 100px; padding: 5px 14px;
+  font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted);
+  letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px;
+}
+.logo-badge::before { content:''; width:5px; height:5px; background:#fff; border-radius:50%; opacity:0.4; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:0.1} }
+
+h1 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: clamp(26px, 5vw, 46px);
+  font-weight: 900; line-height: 1; letter-spacing: -2px;
+  color: #fff;
+}
+
+.tagline { margin-top: 10px; font-size: 13px; font-family: 'DM Sans', sans-serif; }
+.tagline-handle { color: #fff; font-weight: 700; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 2px 8px; }
+.tagline-desc { color: var(--muted); margin-left: 6px; }
+
+.social-links { display: flex; justify-content: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+
+.quote-box {
+  position: relative; max-width: 540px; margin: 18px auto 0;
+  padding: 14px 18px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 14px;
+  text-align: left;
+}
+.quote-toggle {
+  display: none; align-items: center; gap: 8px; cursor: pointer;
+}
+.quote-preview {
+  font-family: 'DM Sans', sans-serif; font-size: 12px;
+  color: var(--muted); font-style: italic; flex: 1;
+}
+.quote-arrow {
+  font-size: 10px; color: var(--muted); flex-shrink: 0;
+}
+.quote-mark {
+  position: absolute; top: 6px; left: 14px;
+  font-size: 32px; font-family: serif; color: var(--muted);
+  opacity: 0.3; line-height: 1;
+}
+.quote-box p {
+  font-family: 'DM Sans', sans-serif; font-size: 12.5px;
+  color: var(--muted); line-height: 1.8; font-style: italic;
+  padding-left: 14px; margin: 0;
+}
+
+@media (max-width: 600px) {
+  .quote-toggle { display: flex; }
+  .quote-mark { display: none; }
+  .quote-box { padding: 12px 14px; margin: 12px auto 0; }
+  .quote-box p { padding-left: 0; font-size: 12px; }
+
+  /* Quote content hidden by default di mobile */
+  #quoteContent { display: none; }
+
+  /* Dual panel jadi atas-bawah di mobile */
+  #dualPanelGrid {
+    grid-template-columns: 1fr !important;
+  }
+  #dual-left-results {
+    grid-template-columns: repeat(3, 1fr) !important;
+    max-height: 200px !important;
+  }
+  #dual-right-results {
+    grid-template-columns: repeat(3, 1fr) !important;
+    max-height: 200px !important;
+  }
+}
+.social-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 16px; border-radius: 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--accent2); font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.2s;
+}
+.social-btn:hover { border-color: rgba(255,255,255,0.2); color: #fff; transform: translateY(-2px); }
+
+/* Panel */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); animation: fadeUp 0.6s 0.1s ease both; }
+
+/* Tabs */
+.filter-tabs { display: flex; gap: 4px; margin-bottom: 18px; background: var(--surface2); border-radius: 12px; padding: 4px; flex-wrap: wrap; }
+.tab { flex: 1; min-width: 80px; padding: 9px 8px; border: none; background: transparent; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; border-radius: 8px; cursor: pointer; transition: all 0.25s; text-align: center; white-space: nowrap; }
+.tab.active { background: #fff; color: #000; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.tab:not(.active):hover { color: var(--text); background: rgba(255,255,255,0.06); }
+
+/* Input */
+.input-row { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 16px; }
+.input-row.two { grid-template-columns: 1fr 1fr; }
+.input-wrap { position: relative; }
+.input-label { position: absolute; top: -8px; left: 12px; background: var(--surface); padding: 0 5px; font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; z-index: 1; }
+
+input[type=text] { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+input[type=text]:focus { border-color: rgba(255,255,255,0.25); box-shadow: 0 0 0 2px rgba(255,255,255,0.06); }
+input[type=text]::placeholder { color: var(--muted); font-weight: 400; font-size: 14px; }
+
+/* Stats */
+.stats { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 18px; }
+.badge { display: inline-flex; align-items: center; gap: 5px; padding: 6px 11px; border-radius: 8px; font-size: 11px; font-family: 'Space Mono', monospace; }
+.badge-white { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: var(--accent2); }
+.badge-yellow { background: rgba(232,255,90,0.07); border: 1px solid rgba(232,255,90,0.15); color: var(--highlight); }
+
+.divider { height: 1px; background: var(--border); margin: 18px 0; }
+
+/* History */
+.history-wrap { margin-bottom: 14px; }
+.history-label { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+.history-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.history-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: 8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+  color: var(--accent2); cursor: pointer; transition: all 0.15s;
+}
+.history-chip:hover { border-color: rgba(255,255,255,0.2); color: #fff; }
+.history-chip .del { color: var(--muted); font-size: 12px; margin-left: 2px; }
+.history-chip .del:hover { color: #fff; }
+
+/* Abjad */
+.abjad-wrap { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 4px; }
+.abjad-btn { width: 32px; height: 32px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); border-radius: 7px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+.abjad-btn:hover:not(:disabled) { border-color: rgba(255,255,255,0.2); color: var(--text); }
+.abjad-btn.active { background: #fff; border-color: #fff; color: #000; }
+.abjad-btn:disabled { opacity: 0.2; cursor: default; }
+
+/* Toolbar */
+.toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+.toolbar-left { display: flex; align-items: center; gap: 8px; }
+.result-count { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
+.result-count span { color: #fff; font-weight: 700; }
+
+.toolbar-right { display: flex; gap: 6px; align-items: center; }
+
+.sort-btn {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--muted); font-family: 'DM Sans', sans-serif;
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+}
+.sort-btn:hover, .sort-btn.active { border-color: rgba(255,255,255,0.2); color: #fff; }
+
+.fav-toggle {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--muted); font-family: 'DM Sans', sans-serif;
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+}
+.fav-toggle.active { background: rgba(232,255,90,0.1); border-color: rgba(232,255,90,0.3); color: var(--highlight); }
+
+.copy-all-btn {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px;
+  background: rgba(232,255,90,0.08); border: 1px solid rgba(232,255,90,0.2);
+  border-radius: 8px; color: var(--highlight); font-family: 'DM Sans', sans-serif;
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+}
+.copy-all-btn:hover { background: rgba(232,255,90,0.15); }
+.copy-all-btn.copied { color: #4ade80; border-color: rgba(74,222,128,0.3); background: rgba(74,222,128,0.08); }
+
+/* Results */
+#results { display: block; min-height: 60px; }
+.empty-state { grid-column:1/-1; text-align:center; padding:48px 20px; color:var(--muted); font-family:'Space Mono',monospace; font-size:12px; }
+.empty-icon { font-size:28px; margin-bottom:10px; }
+
+.item {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px; cursor: pointer; transition: all 0.18s;
+  font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 14px;
+  color: var(--text); position: relative; overflow: hidden;
+  animation: itemIn 0.2s ease both; word-break: break-word;
+}
+.item:hover { border-color: rgba(255,255,255,0.18); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+.item.favorited { border-color: rgba(232,255,90,0.25); }
+.item .word-text { position: relative; z-index: 1; text-transform: uppercase; }
+.item .word-text .highlight { color: var(--highlight); font-weight: 800; }
+.word-text .highlight { color: var(--highlight); font-weight: 800; }
+.dual-highlight { color: var(--highlight); font-weight: 800; }
+.item .word-meta { font-family:'Space Mono',monospace; font-size:10px; color:var(--muted); margin-top:5px; }
+.item .fav-star { position: absolute; top: 10px; right: 10px; font-size: 14px; opacity: 0; transition: opacity 0.15s; cursor: pointer; z-index: 2; }
+.item:hover .fav-star { opacity: 1; }
+.item.favorited .fav-star { opacity: 1; }
+.item .rare-badge { display: inline-block; font-family:'Space Mono',monospace; font-size:9px; color:#f87171; background:rgba(248,113,113,0.1); border:1px solid rgba(248,113,113,0.2); border-radius:4px; padding:1px 5px; margin-top:4px; }
+
+@keyframes itemIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+/* Favorit Tab */
+#favPanel { display: none; }
+.fav-empty { text-align:center; padding:40px; color:var(--muted); font-family:'Space Mono',monospace; font-size:12px; }
+
+/* Footer */
+footer { text-align: center; padding: 28px 0 0; animation: fadeUp 0.6s 0.2s ease both; }
+.footer-note { font-family:'DM Sans',sans-serif; font-size:12px; color:var(--muted); }
+.footer-note a { color: var(--accent2); text-decoration:none; }
+
+/* Mic button */
+.mic-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--muted); cursor: pointer;
+  transition: all 0.2s; font-size: 18px; flex-shrink: 0;
+}
+.mic-btn:hover { border-color: rgba(255,255,255,0.2); color: #fff; }
+.mic-btn.listening { border-color: #f87171; color: #f87171; background: rgba(248,113,113,0.1); animation: micPulse 1s infinite; }
+@keyframes micPulse { 0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,0.3)} 50%{box-shadow:0 0 0 8px rgba(248,113,113,0)} }
+
+.input-with-mic { display: flex; gap: 8px; align-items: center; }
+.input-with-mic input { flex: 1; }
+
+/* Comeback */
+.comeback-input-wrap { margin-bottom: 20px; }
+.comeback-card {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 16px; padding: 20px; margin-bottom: 12px;
+  animation: itemIn 0.25s ease both;
+}
+.comeback-rank {
+  font-family: 'Space Mono', monospace; font-size: 10px;
+  color: var(--muted); letter-spacing: 1px; margin-bottom: 8px;
+  text-transform: uppercase;
+}
+.comeback-rank span { color: var(--highlight); font-weight: 700; }
+.comeback-word {
+  font-family: 'DM Sans', sans-serif; font-weight: 900;
+  font-size: 28px; letter-spacing: -1px; color: #fff;
+  margin-bottom: 4px; cursor: pointer;
+}
+.comeback-word:hover { color: var(--highlight); }
+.comeback-word .highlight { color: var(--highlight); }
+.comeback-score-bar {
+  display: flex; gap: 10px; align-items: center; margin: 10px 0 8px;
+}
+.comeback-bar-bg {
+  flex: 1; height: 4px; background: rgba(255,255,255,0.06);
+  border-radius: 4px; overflow: hidden;
+}
+.comeback-bar-fill {
+  height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, #4ade80, #e8ff5a);
+  transition: width 0.5s ease;
+}
+.comeback-score-label {
+  font-family: 'Space Mono', monospace; font-size: 11px;
+  color: var(--muted); white-space: nowrap;
+}
+.comeback-score-label b { color: #fff; }
+.comeback-meta {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;
+}
+.comeback-badge {
+  font-family: 'Space Mono', monospace; font-size: 10px;
+  padding: 3px 8px; border-radius: 6px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+  color: var(--muted);
+}
+.comeback-badge.good { background: rgba(74,222,128,0.08); border-color: rgba(74,222,128,0.2); color: #4ade80; }
+.comeback-badge.warn { background: rgba(232,255,90,0.08); border-color: rgba(232,255,90,0.2); color: var(--highlight); }
+.comeback-badge.bad  { background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.2); color: #f87171; }
+.comeback-empty { text-align:center; padding:48px 20px; color:var(--muted); font-family:'Space Mono',monospace; font-size:12px; }
+.comeback-loading { text-align:center; padding:32px; color:var(--muted); font-family:'Space Mono',monospace; font-size:11px; }
+.comeback-mode-row { display:flex; gap:8px; margin-bottom:16px; }
+.comeback-mode-btn {
+  flex:1; padding:8px; border-radius:10px; border:1px solid var(--border);
+  background:var(--surface2); color:var(--muted); font-family:'DM Sans',sans-serif;
+  font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s;
+}
+.comeback-mode-btn.active { background:rgba(232,255,90,0.1); border-color:rgba(232,255,90,0.3); color:var(--highlight); }
+
+/* Jebakan Panel */
+.jebakan-group { margin-bottom: 24px; }
+.jebakan-group-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: 10px;
+  background: rgba(251,191,36,0.08);
+  border: 1px solid rgba(251,191,36,0.2);
+  margin-bottom: 10px;
+}
+.jebakan-group-title {
+  font-family: 'Space Mono', monospace; font-size: 12px;
+  font-weight: 700; color: #fbbf24; letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.jebakan-group-count {
+  font-family: 'Space Mono', monospace; font-size: 10px;
+  color: var(--muted); margin-left: auto;
+}
+.jebakan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px,1fr));
+  gap: 8px;
+}
+
+/* Light mode */
+body.light {
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --surface2: #eeeeee;
+  --border: rgba(0,0,0,0.08);
+  --border-active: rgba(0,0,0,0.3);
+  --text: #111111;
+  --muted: #888888;
+  --accent: #000000;
+  --accent2: #444444;
+  --highlight: #7c6f00;
+}
+body.light .blob { opacity: 0.06; }
+body.light .blob-1 { background: #ccc; }
+body.light .blob-2 { background: #bbb; }
+body.light .blob-3 { background: #c5c5c5; }
+
+/* Theme toggle */
+.theme-toggle {
+  position: fixed; top: 20px; right: 20px; z-index: 100;
+  width: 40px; height: 40px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--muted); cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.theme-toggle:hover { color: var(--text); border-color: var(--border-active); }
+
+/* Favorit corner button */
+.fav-corner-btn {
+  position: fixed; top: 20px; right: 70px; z-index: 100;
+  height: 40px; padding: 0 14px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); cursor: pointer; font-size: 13px; font-weight: 600;
+  display: flex; align-items: center; gap: 7px;
+  font-family: 'DM Sans', sans-serif; transition: all 0.2s;
+}
+.fav-corner-btn:hover { border-color: var(--border-active); }
+.fav-corner-badge {
+  background: var(--highlight); color: #000;
+  border-radius: 100px; min-width: 18px; height: 18px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; padding: 0 5px;
+}
+.fav-dropdown {
+  position: fixed; top: 66px; right: 20px; z-index: 99;
+  width: 320px; max-height: 420px; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 16px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  animation: fadeUp 0.2s ease both;
+}
+.fav-dropdown-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px;
+}
+.fav-dropdown-title { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 700; color: var(--text); }
+.fav-clear-btn {
+  background: none; border: 1px solid var(--border); border-radius: 8px;
+  padding: 4px 9px; color: var(--muted); font-size: 11px; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+}
+.fav-dropdown-list { display: flex; flex-direction: column; gap: 6px; }
+.fav-dropdown-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 12px; border-radius: 10px; background: var(--surface2);
+  border: 1px solid var(--border); cursor: pointer; transition: all 0.15s;
+}
+.fav-dropdown-item:hover { border-color: var(--border-active); }
+.fav-dropdown-word { font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; color: var(--text); }
+.fav-dropdown-remove { color: var(--muted); cursor: pointer; font-size: 14px; padding: 2px 4px; }
+.fav-dropdown-remove:hover { color: #f87171; }
+.fav-dropdown-empty { text-align: center; padding: 30px 10px; color: var(--muted); font-family: 'Space Mono', monospace; font-size: 12px; }
+
+@media (max-width: 600px) {
+  .fav-corner-btn { top: 12px; right: 12px; padding: 0 10px; font-size: 12px; height: 36px; }
+  .theme-toggle { display: none; }
+  .fav-dropdown { width: calc(100vw - 24px); right: 12px; top: 56px; }
+}
+
+/* Popup overlay */
+.popup-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  z-index: 1000; display: flex; align-items: center; justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+.popup-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; padding: 32px; max-width: 440px; width: 90%;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+.popup-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; margin-bottom: 16px;
+}
+.popup-title { font-family: 'DM Sans', sans-serif; font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
+.popup-body { font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 16px; }
+.popup-regards { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); margin-bottom: 24px; }
+.popup-btn {
+  width: 100%; padding: 12px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+}
+.popup-btn:hover { border-color: var(--border-active); }
+
+/* Shortcut info */
+.shortcut-bar {
+  display: flex; justify-content: center; gap: 16px;
+  flex-wrap: wrap; margin-top: 12px; padding: 10px 0;
+}
+.shortcut-item {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted);
+}
+.kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 2px 7px; border-radius: 5px;
+  background: var(--surface2); border: 1px solid var(--border);
+  font-family: 'Space Mono', monospace; font-size: 10px; color: var(--accent2);
+  min-width: 24px;
+}
+
+/* Chaos keyboard */
+.chaos-key {
+  aspect-ratio: 1; font-size: 16px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface2);
+  cursor: pointer; display: flex; align-items: center;
+  justify-content: center; transition: all 0.15s; position: relative;
+}
+.chaos-key:hover { border-color: rgba(139,92,246,0.5); transform: scale(1.08); background: rgba(139,92,246,0.1); }
+.chaos-key:active { transform: scale(0.95); }
+.chaos-key .key-letter {
+  position: absolute; bottom: 2px; right: 4px;
+  font-size: 8px; font-family: 'Space Mono', monospace;
+  color: var(--muted); font-weight: 700; line-height: 1;
+}
+
+/* Source indicator */
+.source-dot {
+  position: absolute; top: 10px; right: 10px;
+  width: 7px; height: 7px; border-radius: 50%;
+  z-index: 2;
+}
+.source-dot.verified { background: #4ade80; box-shadow: 0 0 4px rgba(74,222,128,0.5); }
+.source-dot.unverified { background: #fbbf24; box-shadow: 0 0 4px rgba(251,191,36,0.5); }
+.item.unverified { border-color: rgba(251,191,36,0.25); background: rgba(251,191,36,0.03); }
+.item.unverified .word-text { color: #fbbf24; }
+.source-legend {
+  display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 14px;
+  font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted);
+}
+.source-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+@media (max-width: 600px) {
+  header { padding: 44px 0 20px; }
+  .panel { padding: 16px; border-radius: 16px; }
+  .input-row.two { grid-template-columns: 1fr; }
+  #results { grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); }
+  .corner-logo { width: 44px; height: 44px; top: 10px; left: 10px; }
+}
+</style>
+</head>
+<body>
+<div class="blobs">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+
+<!-- Loading Overlay -->
+<div class="popup-overlay" id="loadingOverlay">
+  <div class="popup-box" style="text-align:center">
+    <div style="font-size:14px;font-family:'DM Sans',sans-serif;color:var(--text);font-weight:700;margin-bottom:16px">📚 Memuat 150.000+ kosakata</div>
+    <div style="height:6px;background:var(--surface2);border-radius:100px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px">
+      <div id="loadProgFill" style="height:100%;width:0%;background:linear-gradient(90deg,#8b5cf6,var(--highlight));border-radius:100px;transition:width 0.4s ease"></div>
+    </div>
+    <div id="loadProgLabel" style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)">Menghubungkan ke database...</div>
+  </div>
+</div>
+
+<!-- Popup 1: Pesan -->
+<div class="popup-overlay" id="popupOverlay1" style="display:none">
+  <div class="popup-box">
+    <div class="popup-icon">🔒</div>
+    <div class="popup-title">Akses Terbatas</div>
+    <div class="popup-body">
+      Website ini merupakan proyek pribadi yang tidak ditujukan untuk konsumsi publik. Akses dan penggunaan terbatas hanya untuk kalangan tertentu. Dilarang menyebarluaskan tautan ini tanpa izin.
+    </div>
+    <div class="popup-regards">Regards,<br>mavisssjoy</div>
+    <button class="popup-btn" onclick="showPopup2()">Saya Mengerti →</button>
+  </div>
+</div>
+
+<!-- Popup 2: Password -->
+<div class="popup-overlay" id="popupOverlay2" style="display:none">
+  <div class="popup-box">
+    <div class="popup-icon">🔑</div>
+    <div class="popup-title">Masukkan Password</div>
+    <div class="popup-body">Hanya pengguna terpilih yang dapat mengakses website ini.</div>
+    <div style="position:relative; margin-bottom:10px;">
+      <input type="password" id="pwInput" placeholder="Password..."
+        style="width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:13px 44px 13px 16px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:15px; outline:none;"
+        oninput="clearPwError()">
+      <button onclick="togglePw()" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:16px; color:var(--muted);" id="eyeBtn">👁</button>
+    </div>
+    <div id="pwError" style="display:none; font-size:12px; color:#f87171; background:rgba(248,113,113,0.1); border:1px solid rgba(248,113,113,0.2); border-radius:8px; padding:8px 12px; margin-bottom:10px;">
+      ❌ Password salah. Akses ditolak.
+    </div>
+    <button class="popup-btn" onclick="checkPassword()">Masuk</button>
+  </div>
+</div>
+
+<!-- Theme toggle -->
+<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Ganti tema">🌙</button>
+
+<!-- Favorit button -->
+<button class="fav-corner-btn" onclick="toggleFavDropdown()" id="favCornerBtn" title="Kata favorit">
+  ❤️ Favorit <span class="fav-corner-badge" id="favCornerBadge">0</span>
+</button>
+<div class="fav-dropdown" id="favDropdown" style="display:none"></div>
+
+<div class="wrapper">
+  <header>
+    <img src="https://tr.rbxcdn.com/180DAY-153fbf607a2fe806ae19354cc00c6318/150/150/Image/Webp/noFilter" alt="Logo" class="corner-logo">
+    <div class="logo-badge">Sambung Kata Edition</div>
+    <h1>KAMUS SAMBUNG KATA</h1>
+    <p class="tagline">
+      <span class="tagline-handle">@mavisssjoy</span>
+      <span class="tagline-desc">· kamus referensi bahasa indonesia</span>
+    </p>
+
+    <div class="quote-box" id="quoteBox">
+      <div class="quote-toggle" onclick="toggleQuote()">
+        <span class="quote-mark">"</span>
+        <span class="quote-preview">Pengetahuan tanpa strategi tidak banyak berarti...</span>
+        <span class="quote-arrow" id="quoteArrow">▼</span>
+      </div>
+      <p id="quoteContent">Pengetahuan tanpa strategi tidak banyak berarti. Kamus ini hanya membantu menemukan kata, namun keputusan untuk menjebak atau menghindari jebakan tetap berada di tangan pemain. Menggunakan kamus ini tidak menjamin kemenangan. Kemenangan tetap ditentukan oleh ketepatan strategi dan kejelian membaca keadaan dalam permainan, bukan sekadar banyaknya kata yang diketahui. Setiap kata yang dipilih adalah sebuah keputusan, dan setiap keputusan membawa risikonya sendiri.</p>
+    </div>
+
+    <div class="social-links">
+      <a href="https://www.tiktok.com/@mavisssjoy?_r=1&_t=ZS-973MUJ9uZIz" target="_blank" class="social-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.74a4.85 4.85 0 01-1.01-.05z"/></svg>
+        @mavisssjoy
+      </a>
+      <a href="https://www.roblox.com/share?code=6d936908a835984e91044f253133a300&type=Profile&source=ProfileShare&stamp=1780965399258" target="_blank" class="social-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M4.679 0L0 19.821 19.821 24 24 4.179zm9.893 13.322l-4.545-1.088 1.087-4.544 4.545 1.087z"/></svg>
+        @mavissjoy
+      </a>
+    </div>
+  </header>
+
+  <div class="panel">
+    <div class="filter-tabs">
+      <button class="tab active" data-mode="awalan">Awalan</button>
+      <button class="tab" data-mode="akhiran">Akhiran</button>
+      <button class="tab" data-mode="keduanya">Awal+Akhir</button>
+      <button class="tab" data-mode="jebakan">🎯 Jebakan</button>
+      <button class="tab" data-mode="eksplorasi">🔬 Eksplorasi Trap</button>
+      <button class="tab" data-mode="dual">⚡ Dual</button>
+    </div>
+
+    <!-- Input row -->
+    <div id="inputRow">
+      <div class="input-wrap">
+        <span class="input-label">Awalan</span>
+        <input type="text" id="q-awalan" placeholder="contoh: a, ber, me...">
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats" id="statsBar" style="margin-top:14px">
+      <div class="badge badge-white" id="statTotal">⟳ Memuat...</div>
+      <div class="badge badge-white">Database Gabungan</div>
+      <div class="badge badge-yellow">Klik kata → KBBI</div>
+    </div>
+
+    <!-- Jebakan panel -->
+    <div id="jebakanPanel" style="display:none">
+      <div style="background:rgba(248,113,113,0.06);border:1px solid rgba(248,113,113,0.18);border-radius:12px;padding:14px 16px;margin-bottom:16px">
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:#f87171;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">⚠️ Hati-hati memilih kata di sini!</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);line-height:1.6">
+          Kata yang ditandai 🔴 berarti salah satu kemungkinan spawn-nya (mode Brutal) bisa membuka jalan bagi lawan untuk membalas dengan kata yang mengarah ke salah satu dari 12 trap word. Jika kamu menulis kata ini, ada risiko trap tersebut kembali ke kamu di giliran berikutnya. Daftar trap mengikuti meta saat ini dan bisa berubah — efektivitasnya juga tergantung seberapa jago lawan kalian. goodluck.
+        </div>
+      </div>
+      <div class="input-wrap" style="margin-bottom:16px">
+        <span class="input-label">Awalan</span>
+        <input type="text" id="q-jebakan" placeholder="contoh: me, ber, an, hana...">
+      </div>
+      <div id="jebakan-toolbar" style="display:none; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
+        <div class="result-count">Ditemukan <span id="jebakanCount">0</span> kata · <span style="color:#f87171">⚠ <span id="jebakanDangerCount">0</span> berbahaya</span></div>
+      </div>
+      <div id="jebakan-results">
+        <div class="empty-state"><div class="empty-icon">🎯</div>Ketik awalan untuk cek kata mana yang aman ditulis...</div>
+      </div>
+    </div>
+
+    <!-- Mode Chaos panel -->
+    <div id="eksplorasiPanel" style="display:none">
+      <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.18);border-radius:12px;padding:14px 16px;margin-bottom:16px">
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:#a78bfa;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">🔬 Eksplorasi Trap Word Baru</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);line-height:1.6">
+          Temukan kandidat trap word baru — suffix yang punya banyak trigger (25+) tapi sedikit solve. Kamu bisa eksplorasi trap baru di sini, tapi tidak menjamin akan spawn di in-game.
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px">
+          <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Min. Trigger</div>
+          <input type="number" id="exp-min-trigger" value="25" min="5" max="500" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;outline:none">
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px">
+          <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Maks. Solve</div>
+          <input type="number" id="exp-max-solve" value="3" min="1" max="20" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;outline:none">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px">
+          <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Panjang Suffix</div>
+          <select id="exp-suffix-len" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none">
+            <option value="3">3 huruf</option>
+            <option value="4">4 huruf</option>
+            <option value="5" selected>5 huruf</option>
+            <option value="6">6 huruf</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button onclick="runEksplorasi()" style="width:100%;padding:10px;border-radius:10px;background:#a78bfa;border:none;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#8b5cf6'" onmouseout="this.style.background='#a78bfa'">🔍 Cari</button>
+        </div>
+      </div>
+
+      <div id="eksplorasi-results">
+        <div class="empty-state"><div class="empty-icon">🔬</div>Atur filter dan klik Cari untuk mulai...</div>
+      </div>
+
+      <div id="eksplorasi-detail" style="margin-top:14px"></div>
+    </div>
+
+    <!-- Dual Mode panel -->
+    <div id="dualPanel" style="display:none">
+      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);line-height:1.6">
+        💡 Gunakan kedua panel secara bersamaan untuk efisiensi maksimal saat game intens. <strong style="color:var(--text)">Kiri: cari solve. Kanan: cari jebakan.</strong>
+      </div>
+      <div id="dualPanelGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+
+        <!-- Kiri: Awalan -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+          <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:12px;font-weight:700;color:var(--text);font-family:'DM Sans',sans-serif">🔍 Awalan</span>
+            <span style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">cari solve</span>
+          </div>
+          <div style="padding:12px">
+            <div class="input-wrap" style="margin-bottom:10px">
+              <span class="input-label">Awalan</span>
+              <input type="text" id="dual-awal" placeholder="ketik awalan..." style="font-size:14px" oninput="searchDualLeft()">
+            </div>
+            <div id="dual-left-count" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px"></div>
+            <div id="dual-left-results" style="display:grid;grid-template-columns:1fr 1fr;gap:5px;max-height:320px;overflow-y:auto"></div>
+          </div>
+        </div>
+
+        <!-- Kanan: Awalan+Akhiran -->
+        <div style="background:var(--surface2);border:1px solid rgba(251,191,36,0.25);border-radius:14px;overflow:hidden">
+          <div style="padding:10px 14px;border-bottom:1px solid rgba(251,191,36,0.2);background:rgba(251,191,36,0.04);display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:12px;font-weight:700;color:#fbbf24;font-family:'DM Sans',sans-serif">⚔️ Jebakan</span>
+            <span style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">awal + akhir</span>
+          </div>
+          <div style="padding:12px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+              <div class="input-wrap">
+                <span class="input-label">Awalan</span>
+                <input type="text" id="dual-jawal" placeholder="me, ber..." style="font-size:13px" oninput="searchDualRight()">
+              </div>
+              <div class="input-wrap">
+                <span class="input-label">Akhiran (pisah koma, maks 5)</span>
+                <input type="text" id="dual-jakhir" placeholder="angsa, wati, ancar..." style="font-size:13px" oninput="searchDualRight()">
+              </div>
+            </div>
+            <div id="dual-color-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px"></div>
+            <div id="dual-right-count" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px"></div>
+            <div id="dual-right-results" style="display:grid;grid-template-columns:1fr 1fr;gap:5px;max-height:320px;overflow-y:auto"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="divider" id="mainDivider"></div>
+
+    <!-- History -->
+    <div class="history-wrap" id="historyWrap" style="display:none">
+      <div class="history-label">Terakhir dicari</div>
+      <div class="history-chips" id="historyChips"></div>
+      <div class="divider" style="margin-top:14px; margin-bottom:0"></div>
+    </div>
+
+    <!-- Abjad bar -->
+    <div id="abjadBar" style="display:none">
+      <div style="margin-top:14px">
+        <div class="abjad-wrap" id="abjadWrap"></div>
+      </div>
+      <div class="divider" style="margin-top:12px; margin-bottom:0"></div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar" id="toolbar" style="display:none; margin-top:14px">
+      <div class="toolbar-left">
+        <div class="result-count">Ditemukan <span id="resultCount">0</span> kata</div>
+      </div>
+      <div class="toolbar-right">
+        <button class="sort-btn" id="sortBtn" onclick="toggleSort()" title="Urutkan">↕ Panjang</button>
+        <button class="fav-toggle" id="rareBtn" onclick="toggleRare()" title="Kata jarang">☠ Jarang</button>
+        <button class="copy-all-btn" id="copyAllBtn" onclick="copyAll()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Salin
+        </button>
+      </div>
+    </div>
+
+    <div class="source-legend" id="sourceLegend" style="display:none">
+      <span><span class="legend-dot" style="background:#4ade80;box-shadow:0 0 4px rgba(74,222,128,0.5)"></span>Terverifikasi KBBI</span>
+      <span><span class="legend-dot" style="background:#fbbf24;box-shadow:0 0 4px rgba(251,191,36,0.5)"></span>Hanya database lokal</span>
+    </div>
+
+    <div id="results" style="margin-top:10px">
+      <div class="empty-state"><div class="empty-icon">🔍</div>Mulai ketik untuk mencari kata...</div>
+    </div>
+  </div>
+
+  <footer>
+    <p class="footer-note">Klik kata untuk membuka di <a href="https://kbbi.kemendikdasmen.go.id" target="_blank">KBBI Online</a></p>
+    <div class="shortcut-bar">
+      <div class="shortcut-item"><span class="kbd">/</span> Fokus pencarian</div>
+      <div class="shortcut-item"><span class="kbd">Esc</span> Hapus pencarian</div>
+      <div class="shortcut-item"><span class="kbd">Alt</span>+<span class="kbd">T</span> Ganti tema</div>
+    </div>
+  </footer>
+</div>
+
+<script>
+const CSV_URL = 'https://raw.githubusercontent.com/aryakdaniswara/kbbi-v6-full-csv/main/kbbi_v6.1.0_full.csv';
+const JSON_URL = './sambung_kata_database.json';
+
+let words = [];
+let mode = 'awalan';
+let activeAbjad = null;
+let currentFound = [];
+let sortMode = 'default'; // default | asc | desc
+let showRareOnly = false;
+let favorites = JSON.parse(localStorage.getItem('samkat_favs') || '[]');
+let searchHistory = JSON.parse(localStorage.getItem('samkat_history') || '[]');
+
+// Prefix index untuk pencarian O(1) — dibangun sekali setelah data load
+let prefixIndex = {};
+function buildPrefixIndex() {
+  prefixIndex = {};
+  for (const w of words) {
+    const wl = w.toLowerCase();
+    for (let i = 1; i <= Math.min(wl.length, 8); i++) {
+      const key = wl.slice(0, i);
+      if (!prefixIndex[key]) prefixIndex[key] = [];
+      prefixIndex[key].push(w);
+    }
+  }
+}
+
+// Suffix index untuk akhiran
+let suffixIndex = {};
+function buildSuffixIndex() {
+  suffixIndex = {};
+  for (const w of words) {
+    const wl = w.toLowerCase();
+    for (let i = 1; i <= Math.min(wl.length, 8); i++) {
+      const key = wl.slice(-i);
+      if (!suffixIndex[key]) suffixIndex[key] = [];
+      suffixIndex[key].push(w);
+    }
+  }
+}
+
+// Counter cache untuk rare detection — pakai prefixIndex, jauh lebih cepat
+function getCounterCount(word) {
+  const wl = word.toLowerCase();
+  // Ambil dari prefixIndex dengan key = kata itu sendiri (prefix penuh)
+  const key = wl.slice(0, Math.min(wl.length, 8));
+  const candidates = prefixIndex[key] || [];
+  return candidates.filter(w => w.toLowerCase().startsWith(wl)).length;
+}
+
+// Debounce helper
+let _searchTimer = null;
+function debounce(fn, delay) {
+  return function(...args) {
+    clearTimeout(_searchTimer);
+    _searchTimer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+// Source tracking: kata yang ada di CSV KBBI dianggap terverifikasi
+let kbbiWords = new Set();
+
+function setLoadProgress(pct, label) {
+  const fill = document.getElementById('loadProgFill');
+  const lbl = document.getElementById('loadProgLabel');
+  if (fill) fill.style.width = pct + '%';
+  if (lbl && label) lbl.textContent = label;
+}
+
+async function loadData() {
+  setLoadProgress(10, 'Menghubungkan ke database KBBI...');
+  let csvWords = [], jsonWords = [];
+  try {
+    const csvData = await new Promise(resolve => {
+      Papa.parse(CSV_URL, { download:true, header:true, skipEmptyLines:true, complete:r=>resolve(r.data), error:()=>resolve([]) });
+    });
+    if (csvData.length) {
+      const c = Object.keys(csvData[0]||{})[0];
+      csvWords = csvData.map(r=>String(r[c]||'').trim()).filter(Boolean).filter(w=>!w.includes('-'));
+    }
+  } catch(e){}
+  setLoadProgress(45, 'Memuat database Sambung Kata...');
+  try { const r=await fetch(JSON_URL); jsonWords=await r.json(); } catch(e){}
+
+  setLoadProgress(70, 'Menggabungkan kosakata...');
+  kbbiWords = new Set(csvWords.map(w => w.toLowerCase()));
+  words = [...new Set([...csvWords,...(jsonWords||[]).map(v=>String(v).trim())])].filter(w=>Boolean(w)&&!w.includes(' ')).sort((a,b)=>a.localeCompare(b,'id'));
+
+  setLoadProgress(88, 'Membangun indeks pencarian...');
+  buildPrefixIndex();
+  buildSuffixIndex();
+  buildDangerousPrefixes();
+  document.getElementById('statTotal').textContent = '📚 '+words.length.toLocaleString('id-ID')+' kosakata';
+
+  setLoadProgress(100, 'Selesai!');
+  setTimeout(() => {
+    document.getElementById('loadingOverlay').style.display = 'none';
+    document.getElementById('popupOverlay1').style.display = 'flex';
+  }, 400);
+}
+loadData();
+
+function isVerified(word) {
+  return kbbiWords.has(word.toLowerCase());
+}
+
+// Save helpers
+function saveFavs() { localStorage.setItem('samkat_favs', JSON.stringify(favorites)); }
+function saveHistory() { localStorage.setItem('samkat_history', JSON.stringify(searchHistory)); }
+
+function addHistory(term) {
+  if (!term || term.length < 2) return;
+  searchHistory = [term, ...searchHistory.filter(h=>h!==term)].slice(0, 10);
+  saveHistory();
+  renderHistory();
+}
+
+function renderHistory() {
+  const wrap = document.getElementById('historyWrap');
+  const chips = document.getElementById('historyChips');
+  if (!searchHistory.length || mode === 'favorit') { wrap.style.display='none'; return; }
+  wrap.style.display = 'block';
+  chips.innerHTML = searchHistory.map((h, idx) => `
+    <div class="history-chip" onclick="applyHistory('${h}')">
+      ${h}
+      <span class="del" onclick="removeHistory(event,${idx})">×</span>
+    </div>`).join('');
+}
+
+function applyHistory(term) {
+  const inp = document.getElementById('q-awalan') || document.getElementById('q-akhiran');
+  if (!inp) return;
+  inp.value = term;
+  inp.dispatchEvent(new Event('input'));
+}
+
+function removeHistory(e, idx) {
+  e.stopPropagation();
+  searchHistory.splice(idx,1);
+  saveHistory();
+  renderHistory();
+}
+
+// Tabs
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    mode = tab.dataset.mode;
+
+    const inputRow = document.getElementById('inputRow');
+    const statsBar = document.getElementById('statsBar');
+    const mainDivider = document.getElementById('mainDivider');
+
+    activeAbjad = null;
+    showRareOnly = false;
+    document.getElementById('rareBtn').classList.remove('active');
+    sortMode = 'default';
+    document.getElementById('sortBtn').classList.remove('active');
+
+    document.getElementById('jebakanPanel').style.display = 'none';
+    document.getElementById('eksplorasiPanel').style.display = 'none';
+    document.getElementById('dualPanel').style.display = 'none';
+
+    if (mode === 'jebakan') {
+      inputRow.style.display = 'none';
+      statsBar.style.display = 'none';
+      mainDivider.style.display = 'none';
+      document.getElementById('historyWrap').style.display = 'none';
+      document.getElementById('abjadBar').style.display = 'none';
+      document.getElementById('toolbar').style.display = 'none';
+      document.getElementById('results').style.display = 'none';
+      document.getElementById('jebakanPanel').style.display = 'block';
+      document.getElementById('q-jebakan').addEventListener('input', doJebakan);
+      return;
+    }
+
+    if (mode === 'eksplorasi') {
+      inputRow.style.display = 'none';
+      statsBar.style.display = 'none';
+      mainDivider.style.display = 'none';
+      document.getElementById('historyWrap').style.display = 'none';
+      document.getElementById('abjadBar').style.display = 'none';
+      document.getElementById('toolbar').style.display = 'none';
+      document.getElementById('sourceLegend').style.display = 'none';
+      document.getElementById('results').style.display = 'none';
+      document.getElementById('eksplorasiPanel').style.display = 'block';
+      return;
+    }
+
+    if (mode === 'dual') {
+      inputRow.style.display = 'none';
+      statsBar.style.display = 'none';
+      mainDivider.style.display = 'none';
+      document.getElementById('historyWrap').style.display = 'none';
+      document.getElementById('abjadBar').style.display = 'none';
+      document.getElementById('toolbar').style.display = 'none';
+      document.getElementById('sourceLegend').style.display = 'none';
+      document.getElementById('results').style.display = 'none';
+      document.getElementById('dualPanel').style.display = 'block';
+      return;
+    }
+
+    inputRow.style.display = '';
+    statsBar.style.display = '';
+    mainDivider.style.display = '';
+    document.getElementById('results').style.display = '';
+
+    if (mode === 'keduanya') {
+      inputRow.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px">
+          <div class="input-wrap"><span class="input-label">Awalan</span><input type="text" id="q-awalan" placeholder="contoh: a, ber..."></div>
+          <div class="input-wrap"><span class="input-label">Akhiran (pisah koma, maks 5)</span><input type="text" id="q-akhiran" placeholder="contoh: angsa, wati, litik..."></div>
+        </div>
+        <div id="keduanya-chips" style="display:flex;flex-wrap:wrap;gap:5px"></div>`;
+    } else {
+      const label = mode==='awalan'?'Awalan':'Akhiran';
+      const id = mode==='awalan'?'q-awalan':'q-akhiran';
+      const ph = mode==='awalan'?'contoh: a, ber, me...':'contoh: an, kan, nya...';
+      inputRow.innerHTML = `<div class="input-wrap"><span class="input-label">${label}</span><input type="text" id="${id}" placeholder="${ph}"></div>`;
+    }
+
+    attachInputListeners();
+    clearResults();
+    renderHistory();
+  });
+});
+
+// 12 Trap Words (update terbaru)
+const TRAP_WORDS = ['ancar','aksis','apang','wati','ungsi','tesis','awang','andur','ritis','matis','angsa','litik','tikal','ratif','warsa','ering','erang','orasi'];
+
+// Set semua prefix (2-8 huruf) yang berbahaya: ada kata berawalan prefix itu
+// yang berakhiran salah satu trap word. Dibangun sekali saat data load.
+let dangerousPrefixes = {}; // { prefix: [trap1, trap2, ...] }
+
+function buildDangerousPrefixes() {
+  dangerousPrefixes = {};
+  words.forEach(w => {
+    const wl = w.toLowerCase();
+    const matchedTrap = TRAP_WORDS.find(t => wl.endsWith(t));
+    if (!matchedTrap) return;
+    // Kata ini berakhiran trap word. Semua prefix dari kata ini (2-8 huruf) jadi "berbahaya"
+    for (let i = 2; i <= Math.min(8, wl.length); i++) {
+      const prefix = wl.slice(0, i);
+      if (!dangerousPrefixes[prefix]) dangerousPrefixes[prefix] = new Set();
+      dangerousPrefixes[prefix].add(matchedTrap);
+    }
+  });
+}
+
+// Cek apakah kata ini berbahaya untuk DITULIS (spawn-nya bisa membuka jalan ke trap)
+function getDangerLevel(word) {
+  const wl = word.toLowerCase();
+  const traps = new Set();
+  for (let i = 2; i <= Math.min(5, wl.length); i++) {
+    const spawn = wl.slice(-i);
+    const found = dangerousPrefixes[spawn];
+    if (found) found.forEach(t => traps.add(t));
+  }
+  return traps.size ? Array.from(traps) : null;
+}
+
+function getTrapMatch(word) {
+  const wl = word.toLowerCase();
+  for (const trap of TRAP_WORDS) {
+    if (wl.endsWith(trap)) return { spawn: trap, trap };
+  }
+  return null;
+}
+
+function attachInputListeners() {
+  const debouncedSearch = debounce(doSearch, 120);
+  document.querySelectorAll('#inputRow input').forEach(inp => {
+    inp.addEventListener('input', debouncedSearch);
+  });
+}
+
+function doSearch() {
+  const awal = (document.getElementById('q-awalan')?.value||'').toLowerCase().trim();
+  const akhirRaw = (document.getElementById('q-akhiran')?.value||'').toLowerCase().trim();
+  const scrollY = window.scrollY;
+
+  // Untuk mode keduanya, parse multi-akhiran
+  const akhirList = mode === 'keduanya'
+    ? akhirRaw.split(',').map(s=>s.trim()).filter(Boolean).slice(0,5)
+    : [akhirRaw];
+  const akhir = akhirList[0] || '';
+
+  // Update color chips untuk keduanya
+  if (mode === 'keduanya') {
+    const chips = document.getElementById('keduanya-chips');
+    if (chips) {
+      chips.innerHTML = akhirList.map((a,i) => `
+        <div style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:7px;background:${DUAL_COLORS[i].bg};border:0.5px solid ${DUAL_COLORS[i].border};font-size:11px;font-weight:600;color:${DUAL_COLORS[i].text};font-family:'Space Mono',monospace">
+          <span style="width:7px;height:7px;border-radius:50%;background:${DUAL_COLORS[i].text};display:inline-block"></span>${a}
+        </div>`).join('');
+    }
+  }
+
+  const query = awal || akhir;
+  if (query.length >= 2) addHistory(query);
+
+  if (!awal && !akhirRaw) {
+    const sy = window.scrollY;
+    clearResults();
+    window.scrollTo(0, sy);
+    return;
+  }
+
+  let found;
+  let wordColorMap = new Map(); // word -> colorIdx untuk keduanya multi
+
+  if (mode === 'awalan' && awal) {
+    const key = awal.slice(0, Math.min(awal.length, 8));
+    const candidates = prefixIndex[key] || [];
+    found = candidates.filter(w => w.toLowerCase().startsWith(awal));
+  } else if (mode === 'akhiran' && akhir) {
+    const key = akhir.slice(-Math.min(akhir.length, 8));
+    const candidates = suffixIndex[key] || [];
+    found = candidates.filter(w => w.toLowerCase().endsWith(akhir));
+  } else if (mode === 'keduanya') {
+    if (akhirList.length > 1) {
+      // Multi-akhiran
+      const resultSet = new Map();
+      akhirList.forEach((ak, colorIdx) => {
+        if (!ak) return;
+        let candidates = words;
+        if (awal) {
+          const key = awal.slice(0, Math.min(awal.length, 8));
+          candidates = prefixIndex[key] || [];
+        }
+        candidates.forEach(w => {
+          const wl = w.toLowerCase();
+          if (awal && !wl.startsWith(awal)) return;
+          if (wl.endsWith(ak) && !resultSet.has(w)) {
+            resultSet.set(w, colorIdx);
+          }
+        });
+      });
+      found = [...resultSet.keys()];
+      wordColorMap = resultSet;
+    } else if (awal && akhir) {
+      const key = awal.slice(0, Math.min(awal.length, 8));
+      const candidates = prefixIndex[key] || [];
+      found = candidates.filter(w => {
+        const wl = w.toLowerCase();
+        return wl.startsWith(awal) && wl.endsWith(akhir);
+      });
+    } else if (awal) {
+      const key = awal.slice(0, Math.min(awal.length, 8));
+      const candidates = prefixIndex[key] || [];
+      found = candidates.filter(w => w.toLowerCase().startsWith(awal));
+    } else if (akhir) {
+      const key = akhir.slice(-Math.min(akhir.length, 8));
+      const candidates = suffixIndex[key] || [];
+      found = candidates.filter(w => w.toLowerCase().endsWith(akhir));
+    } else {
+      found = [];
+    }
+  } else {
+    found = [];
+  }
+
+  // Abjad (akhiran only)
+  const abjadBar = document.getElementById('abjadBar');
+  if (mode==='akhiran') {
+    const avail = new Set(found.map(w=>w[0].toUpperCase()));
+    renderAbjad(avail);
+    abjadBar.style.display = found.length ? 'block' : 'none';
+  } else {
+    abjadBar.style.display = 'none';
+    activeAbjad = null;
+  }
+  if (activeAbjad) found = found.filter(w=>w[0].toUpperCase()===activeAbjad);
+
+  // Rare filter
+  if (showRareOnly) found = found.filter(w => getCounterCount(w) <= 5);
+
+  // Sort
+  if (sortMode==='asc') found = [...found].sort((a,b)=>a.length-b.length);
+  else if (sortMode==='desc') found = [...found].sort((a,b)=>b.length-a.length);
+
+  currentFound = found;
+  const displayFound = found.slice(0, 200);
+
+  document.getElementById('resultCount').textContent = found.length;
+  document.getElementById('toolbar').style.display = found.length ? 'flex' : 'none';
+  document.getElementById('sourceLegend').style.display = found.length ? 'flex' : 'none';
+
+  if (!displayFound.length) {
+    document.getElementById('results').innerHTML = `<div class="empty-state"><div class="empty-icon">😶</div>Kata tidak ditemukan</div>`;
+    return;
+  }
+
+  function hl(word, colorIdx) {
+    const wl = word.toLowerCase();
+    if (mode==='awalan' && awal && wl.startsWith(awal))
+      return `<span class="highlight">${word.slice(0,awal.length)}</span>${word.slice(awal.length)}`;
+    if (mode==='akhiran' && akhir && wl.endsWith(akhir)) {
+      const s=word.length-akhir.length;
+      return `${word.slice(0,s)}<span class="highlight">${word.slice(s)}</span>`;
+    }
+    if (mode==='keduanya') {
+      // Multi-akhiran dengan warna
+      if (colorIdx !== undefined && akhirList.length > 1) {
+        const ak = akhirList[colorIdx] || '';
+        const c = DUAL_COLORS[colorIdx];
+        if (awal && wl.startsWith(awal) && ak && wl.endsWith(ak)) {
+          const s = word.length - ak.length;
+          return `<span class="highlight">${word.slice(0,awal.length)}</span>${word.slice(awal.length,s)}<span style="color:${c.text};font-weight:800">${word.slice(s)}</span>`;
+        }
+        if (ak && wl.endsWith(ak)) {
+          const s = word.length - ak.length;
+          return `${word.slice(0,s)}<span style="color:${c.text};font-weight:800">${word.slice(s)}</span>`;
+        }
+        if (awal && wl.startsWith(awal)) return `<span class="highlight">${word.slice(0,awal.length)}</span>${word.slice(awal.length)}`;
+      }
+      if (awal && wl.startsWith(awal) && akhir && wl.endsWith(akhir) && awal.length+akhir.length<=word.length) {
+        const mid=word.slice(awal.length,word.length-akhir.length);
+        return `<span class="highlight">${word.slice(0,awal.length)}</span>${mid}<span class="highlight">${word.slice(word.length-akhir.length)}</span>`;
+      }
+      if (awal && wl.startsWith(awal)) return `<span class="highlight">${word.slice(0,awal.length)}</span>${word.slice(awal.length)}`;
+      if (akhir && wl.endsWith(akhir)) { const s=word.length-akhir.length; return `${word.slice(0,s)}<span class="highlight">${word.slice(s)}</span>`; }
+    }
+    return word;
+  }
+
+  const resultsEl = document.getElementById('results');
+  resultsEl.innerHTML = '';
+
+  function renderCard(w, i) {
+    const isFav = favorites.includes(w);
+    const isRare = getCounterCount(w) <= 5;
+    const verified = isVerified(w);
+    const colorIdx = wordColorMap.has(w) ? wordColorMap.get(w) : undefined;
+    const d = document.createElement('div');
+    d.className = 'item' + (isFav?' favorited':'') + (!verified?' unverified':'');
+    d.style.animationDelay = (i*8)+'ms';
+    d.innerHTML = `
+      <span class="source-dot ${verified?'verified':'unverified'}" title="${verified?'Terverifikasi KBBI':'Hanya di database lokal — belum terverifikasi'}"></span>
+      <span class="fav-star" onclick="toggleFav(event,'${w}')">${isFav?'⭐':'☆'}</span>
+      <div class="word-text">${hl(w, colorIdx)}</div>
+      ${isRare?'<div class="rare-badge">☠ jarang</div>':''}
+      <div class="word-meta">${w[0].toUpperCase()}···${w[w.length-1].toUpperCase()} · ${w.length} huruf</div>`;
+    d.onclick = () => window.open('https://kbbi.kemendikdasmen.go.id/entri/'+encodeURIComponent(w),'_blank');
+    return d;
+  }
+
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px';
+  displayFound.forEach((w, i) => grid.appendChild(renderCard(w, i)));
+  resultsEl.appendChild(grid);
+
+  // Auto-scroll ke hasil di HP
+  if (window.innerWidth <= 600) {
+    setTimeout(() => {
+      resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  }
+}
+
+function renderAbjad(availableLetters) {
+  const wrap = document.getElementById('abjadWrap');
+  wrap.innerHTML = '';
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(letter => {
+    const btn = document.createElement('button');
+    btn.className = 'abjad-btn'+(activeAbjad===letter?' active':'');
+    btn.textContent = letter;
+    if (!availableLetters.has(letter)) btn.disabled = true;
+    else btn.onclick = ()=>{ activeAbjad = activeAbjad===letter?null:letter; doSearch(); };
+    wrap.appendChild(btn);
+  });
+}
+
+function clearResults() {
+  document.getElementById('results').innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div>Mulai ketik untuk mencari kata...</div>`;
+  document.getElementById('toolbar').style.display = 'none';
+  document.getElementById('sourceLegend').style.display = 'none';
+  document.getElementById('abjadBar').style.display = 'none';
+  activeAbjad = null;
+}
+
+// Sort
+function toggleSort() {
+  const btn = document.getElementById('sortBtn');
+  if (sortMode==='default') { sortMode='asc'; btn.textContent='↑ Terpendek'; btn.classList.add('active'); }
+  else if (sortMode==='asc') { sortMode='desc'; btn.textContent='↓ Terpanjang'; }
+  else { sortMode='default'; btn.textContent='↕ Panjang'; btn.classList.remove('active'); }
+  doSearch();
+}
+
+// Rare
+function toggleRare() {
+  showRareOnly = !showRareOnly;
+  document.getElementById('rareBtn').classList.toggle('active', showRareOnly);
+  doSearch();
+}
+
+// Favorit
+function toggleFav(e, word) {
+  e.stopPropagation();
+  if (favorites.includes(word)) favorites = favorites.filter(f=>f!==word);
+  else favorites.push(word);
+  saveFavs();
+  doSearch();
+  updateFavBadge();
+}
+
+function updateFavBadge() {
+  const badge = document.getElementById('favCornerBadge');
+  if (badge) badge.textContent = favorites.length;
+}
+
+function toggleFavDropdown() {
+  const dd = document.getElementById('favDropdown');
+  const isOpen = dd.style.display !== 'none';
+  if (isOpen) { dd.style.display = 'none'; return; }
+  renderFavDropdown();
+  dd.style.display = 'block';
+}
+
+// Tutup dropdown kalau klik di luar
+document.addEventListener('click', e => {
+  const dd = document.getElementById('favDropdown');
+  const btn = document.getElementById('favCornerBtn');
+  if (dd && dd.style.display !== 'none' && !dd.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+    dd.style.display = 'none';
+  }
+});
+
+function renderFavDropdown() {
+  const dd = document.getElementById('favDropdown');
+  if (!favorites.length) {
+    dd.innerHTML = `
+      <div class="fav-dropdown-header">
+        <span class="fav-dropdown-title">❤️ Kata Favorit</span>
+      </div>
+      <div class="fav-dropdown-empty">Belum ada favorit.<br>Klik ☆ di kartu kata untuk simpan.</div>`;
+    return;
+  }
+  dd.innerHTML = `
+    <div class="fav-dropdown-header">
+      <span class="fav-dropdown-title">❤️ Kata Favorit (${favorites.length})</span>
+      <button class="fav-clear-btn" onclick="clearFavs()">Hapus Semua</button>
+    </div>
+    <div class="fav-dropdown-list">
+      ${favorites.map(w => `
+        <div class="fav-dropdown-item" onclick="window.open('https://kbbi.kemendikdasmen.go.id/entri/${encodeURIComponent(w)}','_blank')">
+          <span class="fav-dropdown-word">${w}</span>
+          <span class="fav-dropdown-remove" onclick="removeFavDirect(event,'${w}')">×</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+function removeFavDirect(e, word) {
+  e.stopPropagation();
+  favorites = favorites.filter(f=>f!==word);
+  saveFavs();
+  renderFavDropdown();
+  updateFavBadge();
+  doSearch();
+}
+
+function clearFavs() {
+  favorites = [];
+  saveFavs();
+  renderFavDropdown();
+  updateFavBadge();
+  doSearch();
+}
+
+// Copy all
+function copyAll() {
+  if (!currentFound.length) return;
+  navigator.clipboard.writeText(currentFound.join('\n')).then(()=>{
+    const btn = document.getElementById('copyAllBtn');
+    btn.classList.add('copied');
+    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Tersalin!`;
+    setTimeout(()=>{ btn.classList.remove('copied'); btn.innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Salin`; }, 2000);
+  });
+}
+
+// Mic / Voice Search
+let recognition = null;
+let isListening = false;
+
+function toggleMic() {
+  const btn = document.getElementById('micBtn');
+  if (!btn) return;
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    alert('Browser kamu tidak support pencarian suara. Coba pakai Chrome.');
+    return;
+  }
+  if (isListening) {
+    recognition?.stop();
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = 'id-ID';
+  recognition.interimResults = false;
+  recognition.onstart = () => { isListening=true; btn.classList.add('listening'); btn.textContent='🔴'; };
+  recognition.onresult = (e) => {
+    const transcript = e.results[0][0].transcript.toLowerCase().trim().split(' ')[0];
+    const inp = document.getElementById('q-awalan') || document.getElementById('q-akhiran');
+    if (inp) { inp.value=transcript; inp.dispatchEvent(new Event('input')); }
+  };
+  recognition.onerror = recognition.onend = () => { isListening=false; if(btn){btn.classList.remove('listening');btn.textContent='🎤';} };
+  recognition.start();
+}
+
+// ── END COMEBACK ───────────────────────────────────────────────────────────────
+
+// ── Jebakan Tab (Anti-Trap) ──
+function doJebakan() {
+  const input = (document.getElementById('q-jebakan')?.value || '').toLowerCase().trim();
+  const container = document.getElementById('jebakan-results');
+  const toolbar = document.getElementById('jebakan-toolbar');
+  if (!container) return;
+  const sy = window.scrollY;
+
+  if (!input) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🎯</div>Ketik awalan untuk cek kata mana yang aman ditulis...</div>`;
+    toolbar.style.display = 'none';
+    window.scrollTo(0, sy);
+    return;
+  }
+
+  const candidates = words.filter(w => w.toLowerCase().startsWith(input));
+
+  if (!candidates.length) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">😶</div>Tidak ada kata berawalan "${input}"</div>`;
+    toolbar.style.display = 'none';
+    return;
+  }
+
+  // Cek danger level setiap kata
+  const analyzed = candidates.map(w => ({ word: w, traps: getDangerLevel(w) }));
+  const dangerCount = analyzed.filter(a => a.traps).length;
+
+  document.getElementById('jebakanCount').textContent = analyzed.length;
+  document.getElementById('jebakanDangerCount').textContent = dangerCount;
+  toolbar.style.display = 'flex';
+
+  // Sort: aman dulu (biar gampang dipilih), bahaya di bawah
+  analyzed.sort((a, b) => {
+    if (!!a.traps !== !!b.traps) return a.traps ? 1 : -1;
+    return a.word.localeCompare(b.word, 'id');
+  });
+
+  container.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px';
+
+  analyzed.slice(0, 300).forEach((item, i) => {
+    const w = item.word;
+    const isDanger = !!item.traps;
+    const verified = isVerified(w);
+    const d = document.createElement('div');
+    d.className = 'item' + (isDanger ? ' danger-card' : '') + (!verified ? ' unverified' : '');
+    d.style.animationDelay = (i*8)+'ms';
+    if (isDanger) {
+      d.style.borderColor = 'rgba(248,113,113,0.4)';
+      d.style.background = 'rgba(248,113,113,0.05)';
+    }
+    const hi = `<span class="highlight">${w.slice(0, input.length)}</span>${w.slice(input.length)}`;
+    d.innerHTML = `
+      <span class="source-dot ${verified?'verified':'unverified'}" title="${verified?'Terverifikasi KBBI':'Belum terverifikasi'}"></span>
+      <div class="word-text">${hi}</div>
+      ${isDanger ? `<div class="rare-badge" style="background:rgba(248,113,113,0.15);color:#f87171;border-color:rgba(248,113,113,0.3)">🔴 bisa trigger: ${item.traps.join(', ')}</div>` : ''}
+      <div class="word-meta">${w[0].toUpperCase()}···${w[w.length-1].toUpperCase()} · ${w.length} huruf</div>`;
+    d.onclick = () => window.open('https://kbbi.kemendikdasmen.go.id/entri/'+encodeURIComponent(w),'_blank');
+    grid.appendChild(d);
+  });
+
+  container.appendChild(grid);
+}
+
+// Quote collapsible (mobile only)
+function toggleQuote() {
+  const content = document.getElementById('quoteContent');
+  const arrow = document.getElementById('quoteArrow');
+  const isOpen = content.style.display !== 'none';
+  content.style.display = isOpen ? 'none' : 'block';
+  arrow.textContent = isOpen ? '▼' : '▲';
+}
+// Default: tutup di mobile
+if (window.innerWidth <= 600) {
+  document.getElementById('quoteContent').style.display = 'none';
+}
+
+// ── Popup ──
+function showPopup2() {
+  document.getElementById('popupOverlay1').style.display = 'none';
+  document.getElementById('popupOverlay2').style.display = 'flex';
+  setTimeout(() => document.getElementById('pwInput').focus(), 100);
+}
+
+function checkPassword() {
+  const val = document.getElementById('pwInput').value;
+  if (val === 'bettercallpal') {
+    document.getElementById('popupOverlay2').style.display = 'none';
+  } else {
+    document.getElementById('pwError').style.display = 'block';
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwInput').focus();
+  }
+}
+
+function clearPwError() {
+  document.getElementById('pwError').style.display = 'none';
+}
+
+function togglePw() {
+  const inp = document.getElementById('pwInput');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+// Enter untuk submit password
+document.getElementById('pwInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') checkPassword();
+});
+
+// ── Theme Toggle ──
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  localStorage.setItem('samkat_theme', isLight ? 'light' : 'dark');
+  document.getElementById('themeBtn').textContent = isLight ? '☀️' : '🌙';
+}
+if (localStorage.getItem('samkat_theme') === 'light') {
+  document.body.classList.add('light');
+  document.getElementById('themeBtn').textContent = '☀️';
+}
+
+// ── Keyboard Shortcuts ──
+document.addEventListener('keydown', e => {
+  // / → fokus ke input aktif
+  if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
+    e.preventDefault();
+    const inp = document.querySelector('#inputRow input') || document.getElementById('q-jebakan');
+    if (inp) inp.focus();
+  }
+  // Escape → clear input
+  if (e.key === 'Escape') {
+    const inp = document.activeElement;
+    if (inp && inp.tagName === 'INPUT') {
+      const sy = window.scrollY;
+      inp.value = '';
+      inp.dispatchEvent(new Event('input'));
+      inp.blur();
+      window.scrollTo(0, sy);
+    }
+    // Tutup popup jika terbuka
+    const popup = document.getElementById('popupOverlay');
+    if (popup.style.display !== 'none') closePopup();
+  }
+  // Alt+T → toggle theme
+  if (e.altKey && e.key === 't') { e.preventDefault(); toggleTheme(); }
+  // Enter di q-addtrap
+  if (e.key === 'Enter' && document.activeElement?.id === 'q-addtrap') addTrapWord();
+});
+
+// ── Dual Mode ──
+function makeDualCard(w, awal, akhir) {
+  const verified = isVerified(w);
+  const wl = w.toLowerCase();
+  let hi = w.toUpperCase();
+  const wu = w.toUpperCase();
+  const awalu = awal.toUpperCase();
+  const akhiru = akhir.toUpperCase();
+
+  if (awal && akhir && wl.startsWith(awal) && wl.endsWith(akhir) && awal.length + akhir.length <= w.length) {
+    const mid = wu.slice(awal.length, wu.length - akhir.length);
+    hi = `<span class="dual-highlight">${wu.slice(0,awal.length)}</span>${mid}<span class="dual-highlight">${wu.slice(wu.length-akhir.length)}</span>`;
+  } else if (awal && wl.startsWith(awal)) {
+    hi = `<span class="dual-highlight">${wu.slice(0,awal.length)}</span>${wu.slice(awal.length)}`;
+  } else if (akhir && wl.endsWith(akhir)) {
+    const s = wu.length - akhir.length;
+    hi = `${wu.slice(0,s)}<span class="dual-highlight">${wu.slice(s)}</span>`;
+  }
+
+  const d = document.createElement('div');
+  d.style.cssText = `padding:8px 10px;border-radius:10px;border:0.5px solid var(--border);background:var(--surface);font-size:12px;font-weight:600;cursor:pointer;word-break:break-word;position:relative`;
+  d.innerHTML = `<span class="source-dot ${verified?'verified':'unverified'}" style="top:6px;right:6px"></span><div class="word-text">${hi}</div><div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-top:3px">${w.length} huruf</div>`;
+  d.onclick = () => window.open('https://kbbi.kemendikdasmen.go.id/entri/'+encodeURIComponent(w),'_blank');
+  return d;
+}
+
+function searchDualLeft() {
+  const awal = (document.getElementById('dual-awal')?.value||'').toLowerCase().trim();
+  const res = document.getElementById('dual-left-results');
+  const cnt = document.getElementById('dual-left-count');
+  if (!awal) { res.innerHTML = ''; cnt.textContent = ''; return; }
+  const found = words.filter(w => w.toLowerCase().startsWith(awal));
+  cnt.textContent = found.length + ' kata ditemukan';
+  res.innerHTML = '';
+  found.slice(0,100).forEach(w => res.appendChild(makeDualCard(w, awal, '')));
+}
+
+const DUAL_COLORS = [
+  { text: '#e8ff5a', bg: 'rgba(232,255,90,0.08)', border: 'rgba(232,255,90,0.25)' },
+  { text: '#67e8f9', bg: 'rgba(103,232,249,0.08)', border: 'rgba(103,232,249,0.25)' },
+  { text: '#f9a8d4', bg: 'rgba(249,168,212,0.08)', border: 'rgba(249,168,212,0.25)' },
+  { text: '#86efac', bg: 'rgba(134,239,172,0.08)', border: 'rgba(134,239,172,0.25)' },
+  { text: '#fda4af', bg: 'rgba(253,164,175,0.08)', border: 'rgba(253,164,175,0.25)' },
+];
+
+function searchDualRight() {
+  const awal = (document.getElementById('dual-jawal')?.value||'').toLowerCase().trim();
+  const akhirRaw = document.getElementById('dual-jakhir')?.value||'';
+  const akhirList = akhirRaw.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean).slice(0,5);
+  const res = document.getElementById('dual-right-results');
+  const cnt = document.getElementById('dual-right-count');
+  const chips = document.getElementById('dual-color-chips');
+
+  if (!awal && !akhirList.length) { res.innerHTML=''; cnt.textContent=''; chips.innerHTML=''; return; }
+
+  // Render color chips
+  chips.innerHTML = akhirList.map((a,i) => `
+    <div style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:7px;background:${DUAL_COLORS[i].bg};border:0.5px solid ${DUAL_COLORS[i].border};font-size:11px;font-weight:600;color:${DUAL_COLORS[i].text};font-family:'Space Mono',monospace">
+      <span style="width:7px;height:7px;border-radius:50%;background:${DUAL_COLORS[i].text};display:inline-block"></span>${a}
+    </div>`).join('');
+
+  // Filter dan match
+  let results = [];
+  words.forEach(w => {
+    const wl = w.toLowerCase();
+    if (awal && !wl.startsWith(awal)) return;
+    if (akhirList.length) {
+      const matchIdx = akhirList.findIndex(a => wl.endsWith(a));
+      if (matchIdx === -1) return;
+      results.push({ word: w, colorIdx: matchIdx, akhir: akhirList[matchIdx] });
+    } else {
+      results.push({ word: w, colorIdx: -1, akhir: '' });
+    }
+  });
+
+  cnt.textContent = results.length + ' kata ditemukan';
+  res.innerHTML = '';
+
+  results.slice(0,100).forEach(({ word, colorIdx, akhir }) => {
+    const wu = word.toUpperCase();
+    const awalLen = awal ? awal.length : 0;
+    const c = colorIdx >= 0 ? DUAL_COLORS[colorIdx] : null;
+
+    let hi = wu;
+    if (akhir && colorIdx >= 0) {
+      const s = wu.length - akhir.length;
+      hi = `<span class="dual-highlight">${wu.slice(0,awalLen)}</span>${wu.slice(awalLen,s)}<span style="color:${c.text};font-weight:800">${wu.slice(s)}</span>`;
+    } else if (awal) {
+      hi = `<span class="dual-highlight">${wu.slice(0,awalLen)}</span>${wu.slice(awalLen)}`;
+    }
+
+    const verified = isVerified(word);
+    const d = document.createElement('div');
+    d.style.cssText = `padding:8px 10px;border-radius:10px;border:0.5px solid ${c?c.border:'var(--border)'};background:${c?c.bg:'var(--surface)'};font-size:12px;font-weight:600;cursor:pointer;word-break:break-word;position:relative`;
+    d.innerHTML = `<span class="source-dot ${verified?'verified':'unverified'}" style="top:6px;right:6px"></span><div class="word-text">${hi}</div><div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-top:3px">${word.length} huruf</div>`;
+    d.onclick = () => window.open('https://kbbi.kemendikdasmen.go.id/entri/'+encodeURIComponent(word),'_blank');
+    res.appendChild(d);
+  });
+}
+
+// ── Eksplorasi Trap ──
+function runEksplorasi() {
+  const minTrigger = parseInt(document.getElementById('exp-min-trigger').value) || 25;
+  const maxSolve = parseInt(document.getElementById('exp-max-solve').value) || 3;
+  const suffixLen = parseInt(document.getElementById('exp-suffix-len').value) || 5;
+  const container = document.getElementById('eksplorasi-results');
+  const detail = document.getElementById('eksplorasi-detail');
+  detail.innerHTML = '';
+  container.innerHTML = `<div class="empty-state"><div class="empty-icon">⏳</div>Sedang menganalisa database...</div>`;
+
+  setTimeout(() => {
+    // Build suffix map: suffix → { triggers: count, solves: [words] }
+    const suffixMap = {};
+    words.forEach(w => {
+      const wl = w.toLowerCase();
+      // Hitung sebagai trigger (kata berakhiran suffix)
+      if (wl.length >= suffixLen) {
+        const suf = wl.slice(-suffixLen);
+        if (!suffixMap[suf]) suffixMap[suf] = { triggers: 0, solves: [] };
+        suffixMap[suf].triggers++;
+      }
+      // Hitung sebagai solve (kata berawalan suffix)
+      if (wl.length >= suffixLen) {
+        const pre = wl.slice(0, suffixLen);
+        if (!suffixMap[pre]) suffixMap[pre] = { triggers: 0, solves: [] };
+        suffixMap[pre].solves.push(w);
+      }
+    });
+
+    // Filter sesuai kriteria
+    const candidates = Object.entries(suffixMap)
+      .filter(([suf, data]) => data.triggers >= minTrigger && data.solves.length <= maxSolve && data.solves.length >= 1)
+      .sort((a, b) => a[1].solves.length - b[1].solves.length || b[1].triggers - a[1].triggers)
+      .slice(0, 50);
+
+    if (!candidates.length) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">😶</div>Tidak ada yang memenuhi kriteria. Coba longgarkan filter.</div>`;
+      return;
+    }
+
+    container.innerHTML = `<div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:12px">${candidates.length} kandidat trap ditemukan · klik untuk lihat detail</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+      ${candidates.map(([suf, data]) => `
+        <div onclick="showEksplorasiDetail('${suf}')" style="padding:12px 14px;border-radius:12px;border:1px solid rgba(139,92,246,0.25);background:rgba(139,92,246,0.06);cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='rgba(139,92,246,0.12)'" onmouseout="this.style.background='rgba(139,92,246,0.06)'">
+          <div style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:#a78bfa;text-transform:uppercase;margin-bottom:6px">${suf}</div>
+          <div style="display:flex;gap:8px">
+            <span style="font-family:'Space Mono',monospace;font-size:10px;color:#f87171">☠ ${data.solves.length} solve</span>
+            <span style="font-family:'Space Mono',monospace;font-size:10px;color:#4ade80">⚡ ${data.triggers} trigger</span>
+          </div>
+          <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-top:4px">solve: ${data.solves.slice(0,2).join(', ')}${data.solves.length>2?'...':''}</div>
+        </div>`).join('')}
+    </div>`;
+  }, 50);
+}
+
+function showEksplorasiDetail(suffix) {
+  const detail = document.getElementById('eksplorasi-detail');
+  const triggers = words.filter(w => w.toLowerCase().endsWith(suffix)).slice(0, 60);
+  const solves = words.filter(w => w.toLowerCase().startsWith(suffix));
+
+  detail.innerHTML = `
+    <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.2);border-radius:14px;padding:16px;margin-top:4px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div style="font-family:'Space Mono',monospace;font-size:14px;color:#a78bfa;font-weight:700;text-transform:uppercase">${suffix}</div>
+        <div style="display:flex;gap:10px">
+          <span style="font-family:'Space Mono',monospace;font-size:11px;color:#f87171">☠ ${solves.length} solve</span>
+          <span style="font-family:'Space Mono',monospace;font-size:11px;color:#4ade80">⚡ ${triggers.length}+ trigger</span>
+        </div>
+      </div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#4ade80;margin-bottom:6px;text-transform:uppercase">Solve:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+        ${solves.map(w=>`<div style="padding:5px 10px;border-radius:8px;border:1px solid rgba(74,222,128,0.3);background:rgba(74,222,128,0.08);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;color:#4ade80;text-transform:uppercase">${w}</div>`).join('')}
+      </div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#f87171;margin-bottom:6px;text-transform:uppercase">Contoh trigger (kata berakhiran ${suffix}):</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px">
+        ${triggers.map(w => {
+          const s = w.length - suffix.length;
+          const hi = `${w.slice(0,s)}<span style="color:#a78bfa;font-weight:800;text-transform:uppercase">${w.slice(s)}</span>`;
+          return `<div onclick="window.open('https://kbbi.kemendikdasmen.go.id/entri/${encodeURIComponent(w)}','_blank')" style="padding:8px 10px;border-radius:8px;border:0.5px solid rgba(139,92,246,0.2);background:var(--surface2);font-size:12px;font-weight:600;cursor:pointer;text-transform:uppercase">${hi}</div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+attachInputListeners();
+renderHistory();
+updateFavBadge();
+</script>
+</body>
+</html>
